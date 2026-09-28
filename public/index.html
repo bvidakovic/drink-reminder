@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#e8f5f1" />
+    <title>Water, on time</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">◒</span> water, on time</div>
+        <span class="topbar-note">A little structure for every sip</span>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <span class="eyebrow"><span class="eyebrow-dot"></span> YOUR DAILY WATER PLAN</span>
+            <h1 id="page-title">Make every<br /><em>sip count.</em></h1>
+            <p>Set your start time, follow each drink, and check it off when it’s done. Your progress stays on this device.</p>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+            <div class="glass"><div class="water"><div class="wave"></div></div><div class="shine"></div></div>
+            <span class="art-sparkle sparkle-one">✳</span><span class="art-sparkle sparkle-two">✦</span>
+          </div>
+        </section>
+
+        <section class="setup-card" aria-labelledby="setup-title">
+          <div class="section-heading">
+            <div><span class="section-kicker">01 / SET YOUR PACE</span><h2 id="setup-title">When do we begin?</h2></div>
+            <span class="section-aside">Two rounds · 18 drinks</span>
+          </div>
+          <div class="setup-controls">
+            <label class="date-field">Start date &amp; time <input id="start-time" type="datetime-local" required /></label>
+            <button id="start-button" class="primary-button" type="button">Create my schedule <span aria-hidden="true">↗</span></button>
+          </div>
+          <p id="setup-error" class="form-error" role="alert" hidden></p>
+          <div class="plan-summary" aria-label="Plan outline">
+            <div><span class="summary-icon">①</span><strong>First hour</strong><small>375 mL at start, then every 15 min</small></div>
+            <span class="summary-arrow" aria-hidden="true">→</span>
+            <div><span class="summary-icon">Ⅱ</span><strong>Take a break</strong><small>30 minutes</small></div>
+            <span class="summary-arrow" aria-hidden="true">→</span>
+            <div><span class="summary-icon">③</span><strong>Next 5 hours</strong><small>5 × 300 mL · hourly</small></div>
+            <span class="summary-arrow" aria-hidden="true">→</span>
+            <div><span class="summary-icon">↺</span><strong>Pause &amp; repeat</strong><small>1 hour break, then round 2</small></div>
+          </div>
+          <p class="safety-note">This plan totals 6 L, including 1.5 L in each first hour. Confirm that this amount is appropriate for you with a healthcare professional.</p>
+        </section>
+
+        <section id="plan" class="plan-area" hidden aria-labelledby="plan-title">
+          <div class="plan-topline">
+            <div><span class="section-kicker">02 / FOLLOW ALONG</span><h2 id="plan-title">Your drinking schedule</h2></div>
+            <div class="plan-actions">
+              <button id="export-button" class="secondary-button" type="button">Download Obsidian checklist</button>
+              <button id="calendar-button" class="secondary-button" type="button">Download calendar alerts</button>
+              <button id="notify-button" class="secondary-button" type="button">Enable notifications</button>
+            </div>
+          </div>
+          <div class="dashboard">
+            <div class="progress-card">
+              <span class="card-label">PLAN PROGRESS</span>
+              <div class="progress-main"><strong id="progress-percent">0%</strong><span id="progress-count">0 of 18 completed</span></div>
+              <div class="progress-track" role="progressbar" aria-label="Drinks completed" aria-valuemin="0" aria-valuemax="18" aria-valuenow="0"><div id="progress-fill"></div></div>
+              <small id="progress-volume">0 mL of 6,000 mL</small>
+            </div>
+            <div class="next-card">
+              <span class="card-label">UP NEXT</span>
+              <strong id="next-label">—</strong>
+              <span id="next-time">—</span>
+              <small id="next-detail">Check off each drink when finished.</small>
+            </div>
+          </div>
+          <p id="reminder-banner" class="reminder-banner" role="status" hidden></p>
+          <p id="notification-note" class="notification-note">Browser notifications work while this page is open. For alerts after closing it, import the calendar file into your calendar app. Overdue drinks remain visible here when you return.</p>
+          <div id="rounds" class="rounds"></div>
+        </section>
+      </main>
+      <footer>One drink at a time. <span>✳</span></footer>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
