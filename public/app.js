@@ -1,12 +1,15 @@
 import { buildSchedule, buildCalendar, formatLocalInput } from "./schedule.js";
 
 const STORAGE_KEY = "water-on-time-v1";
+const SYNC_STORAGE_KEY = "water-on-time-sync-v1";
 const startInput = document.querySelector("#start-time");
 const startButton = document.querySelector("#start-button");
 const errorText = document.querySelector("#setup-error");
 const plan = document.querySelector("#plan");
 const rounds = document.querySelector("#rounds");
 const notifyButton = document.querySelector("#notify-button");
+const syncKeyInput = document.querySelector("#sync-key");
+const syncStatus = document.querySelector("#sync-status");
 
 function loadState() {
   try {
@@ -27,6 +30,101 @@ function loadState() {
 let state = loadState();
 let steps = state.startTime ? buildSchedule(state.startTime) : [];
 let lastTick = Date.now();
+
+function loadSyncSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SYNC_STORAGE_KEY));
+    return {
+      key: typeof saved?.key === "string" ? saved.key : "",
+      pending: Array.isArray(saved?.pending) ? saved.pending : [],
+    };
+  } catch { return { key: "", pending: [] }; }
+}
+
+let syncSettings = loadSyncSettings();
+let syncing = null;
+function saveSyncSettings() { localStorage.setItem(SYNC_STORAGE_KEY, JSON.stringify(syncSettings)); }
+function setSyncStatus(message, isError = false) {
+  syncStatus.textContent = message;
+  syncStatus.classList.toggle("error", isError);
+}
+function renderSyncControls() {
+  const connected = Boolean(syncSettings.key);
+  document.querySelector("#sync-disconnected").hidden = connected;
+  document.querySelector("#sync-connected").hidden = !connected;
+}
+
+async function syncRequest(key, method = "GET", body) {
+  let response;
+  try {
+    response = await fetch("/api/sync", {
+      method,
+      headers: {
+        Authorization: `Bearer ${key}`,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+    });
+  } catch { throw new Error("No connection. Your changes are saved on this device."); }
+  if (response.status === 404) throw new Error("Sync is available after deployment to Vercel.");
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Could not sync progress.");
+  return data;
+}
+
+function applyRemotePlan(remote) {
+  if (!remote) return;
+  const nextStart = remote.startTime ?? null;
+  const changedStart = state.startTime !== nextStart;
+  state = {
+    startTime: nextStart,
+    completed: Array.isArray(remote.completed) ? remote.completed : [],
+    notified: changedStart ? [] : state.notified,
+  };
+  steps = state.startTime ? buildSchedule(state.startTime) : [];
+  if (state.startTime) startInput.value = formatLocalInput(new Date(state.startTime));
+  save();
+  render();
+  sendDueNotifications();
+}
+
+function requestSync() {
+  if (!syncSettings.key) return Promise.resolve();
+  if (syncing) return syncing;
+  const key = syncSettings.key;
+  syncing = (async () => {
+    setSyncStatus("Syncing…");
+    while (true) {
+      if (syncSettings.key !== key) return;
+      while (syncSettings.pending.length) {
+        const operation = syncSettings.pending[0];
+        await syncRequest(key, "POST", operation);
+        if (syncSettings.key !== key) return;
+        syncSettings.pending.shift();
+        saveSyncSettings();
+      }
+      const result = await syncRequest(key);
+      if (syncSettings.key !== key) return;
+      if (syncSettings.pending.length) continue;
+      applyRemotePlan(result.state);
+      setSyncStatus("Up to date on this device.");
+      return;
+    }
+  })().catch((error) => {
+    if (syncSettings.key !== key) return;
+    const waiting = syncSettings.pending.length ? ` ${syncSettings.pending.length} change(s) waiting to sync.` : "";
+    setSyncStatus(error.message + waiting, true);
+  }).finally(() => { syncing = null; });
+  return syncing;
+}
+
+function queueSync(operation) {
+  if (!syncSettings.key) return;
+  syncSettings.pending.push(operation);
+  saveSyncSettings();
+  void requestSync();
+}
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" });
@@ -163,11 +261,13 @@ startButton.addEventListener("click", () => {
   }
   const nextStart = new Date(selected).toISOString();
   if (state.startTime && state.startTime !== nextStart && state.completed.length > 0 && !window.confirm("Changing the start time will clear your checked drinks. Continue?")) return;
-  if (state.startTime !== nextStart) state = { startTime: nextStart, completed: [], notified: [] };
+  const changedStart = state.startTime !== nextStart;
+  if (changedStart) state = { startTime: nextStart, completed: [], notified: [] };
   steps = buildSchedule(state.startTime);
   save();
   render();
   sendDueNotifications();
+  if (changedStart) queueSync({ type: "start", startTime: nextStart });
   plan.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
@@ -178,6 +278,49 @@ rounds.addEventListener("change", (event) => {
   state.completed = checkbox.checked ? [...state.completed, id] : state.completed.filter((item) => item !== id);
   save();
   render();
+  queueSync({ type: "check", startTime: state.startTime, id, checked: checkbox.checked });
+});
+
+document.querySelector("#sync-connect").addEventListener("click", async (event) => {
+  const key = syncKeyInput.value.trim();
+  if (key.length < 32) { setSyncStatus("Enter the full private sync code.", true); return; }
+  const button = event.currentTarget;
+  button.disabled = true;
+  setSyncStatus("Connecting…");
+  try {
+    let { state: remote } = await syncRequest(key);
+    if (remote && state.startTime && JSON.stringify({ startTime: state.startTime, completed: state.completed }) !== JSON.stringify(remote)
+      && !window.confirm("This device has a different checklist. Replace it with the synced checklist?")) {
+      setSyncStatus("Connection cancelled. Your local checklist is unchanged.");
+      return;
+    }
+    if (!remote) {
+      const result = await syncRequest(key, "POST", { type: "initialize", state: { startTime: state.startTime, completed: state.completed } });
+      remote = result.state;
+    }
+    syncSettings = { key, pending: [] };
+    saveSyncSettings();
+    syncKeyInput.value = "";
+    applyRemotePlan(remote);
+    renderSyncControls();
+    setSyncStatus("Connected. Use this same code on your other device.");
+  } catch (error) { setSyncStatus(error.message, true); }
+  finally { button.disabled = false; }
+});
+
+document.querySelector("#sync-now").addEventListener("click", () => { void requestSync(); });
+document.querySelector("#sync-copy").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(syncSettings.key);
+    setSyncStatus("Code copied. Keep it private and enter it on your other device.");
+  } catch { setSyncStatus("Could not copy the code. Check your browser permissions.", true); }
+});
+document.querySelector("#sync-disconnect").addEventListener("click", () => {
+  if (syncSettings.pending.length && !window.confirm("Some changes have not synced. Disconnect anyway?")) return;
+  syncSettings = { key: "", pending: [] };
+  saveSyncSettings();
+  renderSyncControls();
+  setSyncStatus("Disconnected. Your checklist remains on this device.");
 });
 
 notifyButton.addEventListener("click", async () => {
@@ -193,8 +336,10 @@ document.querySelector("#calendar-button").addEventListener("click", () => {
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) { render(); sendDueNotifications(); }
+  if (!document.hidden) { render(); sendDueNotifications(); void requestSync(); }
 });
+window.addEventListener("online", () => { void requestSync(); });
+setInterval(() => { if (!document.hidden) void requestSync(); }, 5 * 60_000);
 
 setInterval(() => {
   const now = Date.now();
@@ -205,5 +350,8 @@ setInterval(() => {
 const initial = new Date();
 initial.setMinutes(Math.ceil(initial.getMinutes() / 15) * 15, 0, 0);
 startInput.value = state.startTime ? formatLocalInput(new Date(state.startTime)) : formatLocalInput(initial);
+renderSyncControls();
+if (syncSettings.key) void requestSync();
+else setSyncStatus("Sync becomes available after deploying the app and adding private Vercel Blob storage.");
 render();
 sendDueNotifications();

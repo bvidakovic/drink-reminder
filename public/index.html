@@ -19,7 +19,7 @@
           <div class="hero-copy">
             <span class="eyebrow"><span class="eyebrow-dot"></span> YOUR DAILY WATER PLAN</span>
             <h1 id="page-title">Make every<br /><em>sip count.</em></h1>
-            <p>Set your start time, follow each drink, and check it off when it’s done. Your progress stays on this device.</p>
+            <p>Set your start time, follow each drink, and check it off when it’s done. Keep your progress here or sync it across your devices.</p>
           </div>
           <div class="hero-art" aria-hidden="true">
             <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
@@ -48,6 +48,21 @@
             <div><span class="summary-icon">↺</span><strong>Pause &amp; repeat</strong><small>1 hour break, then round 2</small></div>
           </div>
           <p class="safety-note">This plan totals 6 L, including 1.5 L in each first hour. Confirm that this amount is appropriate for you with a healthcare professional.</p>
+        </section>
+
+        <section class="sync-card" aria-labelledby="sync-title">
+          <div><span class="section-kicker">OPTIONAL / ACROSS DEVICES</span><h2 id="sync-title">Keep your progress together</h2><p>Connect your phone and computer with the same private sync code. Your checklist stays available on this device when you’re offline.</p></div>
+          <div id="sync-disconnected" class="sync-controls">
+            <label class="date-field">Private sync code <input id="sync-key" type="password" autocomplete="off" spellcheck="false" placeholder="Enter the code from Vercel" /></label>
+            <button id="sync-connect" class="primary-button" type="button">Connect device</button>
+          </div>
+          <div id="sync-connected" class="sync-actions" hidden>
+            <span class="connected-pill">● Connected</span>
+            <button id="sync-now" class="secondary-button" type="button">Sync now</button>
+            <button id="sync-copy" class="secondary-button" type="button">Copy code</button>
+            <button id="sync-disconnect" class="secondary-button" type="button">Disconnect</button>
+          </div>
+          <p id="sync-status" class="sync-status" role="status" aria-live="polite"></p>
         </section>
 
         <section id="plan" class="plan-area" hidden aria-labelledby="plan-title">
