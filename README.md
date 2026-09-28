@@ -18,11 +18,11 @@ Every GitHub push and pull request runs the tests. Deployments are handled by Ve
 
 ## Sync phone and computer
 
-Vercel Blob is free within the Hobby plan's included limits. In the Vercel project, create a **private** Blob store and connect it to this project. Vercel provides `BLOB_READ_WRITE_TOKEN` to the deployment. Generate a long secret code locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"`, then add it as the `SYNC_KEY` environment variable in Vercel Project Settings. Keep that code private and never commit it. Redeploy after adding the store and variable.
+Vercel Blob is free within the Hobby plan's included limits. In the Vercel project, create a **private** Blob store, or open an existing store's **Projects** tab and connect this project for **Production**. Vercel supplies `BLOB_STORE_ID` and a rotating `VERCEL_OIDC_TOKEN` to connected deployments; a static `BLOB_READ_WRITE_TOKEN` is not needed on Vercel. Generate a long secret code locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"`, then add it as the `SYNC_KEY` environment variable in Vercel Project Settings. Keep that code private and never commit it. Redeploy the latest commit after connecting the store and adding the code. For local server-side development outside Vercel, a Blob read-write token can be used instead.
 
 Open the deployed app on the first device, enter the code in **Keep your progress together**, and click **Connect device**. It uploads that device's existing checklist. On the second device, enter the same code to load it. The first connection to an existing synced checklist asks before replacing local progress. The app syncs after each change, when reopened, and periodically while visible. Changes made offline stay on the device and are sent when it reconnects. **Sync now** requests an immediate refresh. **Disconnect** keeps a local copy.
 
-The shared code grants access to this one checklist. Anyone with it could read and change your progress, so share it only between your own devices. Sync uses private server-side Blob storage; the token is never sent to browsers. The current app does not send mobile push notifications while closed.
+The shared code grants access to this one checklist. Anyone with it could read and change your progress, so share it only between your own devices. Sync uses private server-side Blob storage; Blob credentials are never sent to browsers. The current app does not send mobile push notifications while closed.
 
 ## Timing
 

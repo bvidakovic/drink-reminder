@@ -17,7 +17,8 @@ function authorized(request) {
 }
 
 function accessError(request) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN || !process.env.SYNC_KEY || process.env.SYNC_KEY.length < 32) return json({ error: "Sync is not configured on this deployment." }, 503);
+  const hasBlobAccess = Boolean(process.env.BLOB_READ_WRITE_TOKEN || (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN));
+  if (!hasBlobAccess || !process.env.SYNC_KEY || process.env.SYNC_KEY.length < 32) return json({ error: "Sync is not configured on this deployment." }, 503);
   if (!authorized(request)) return json({ error: "The sync code is incorrect." }, 401);
   return null;
 }
